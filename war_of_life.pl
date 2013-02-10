@@ -136,7 +136,7 @@ start_config(checkers, [[[3,1],[4,2],[3,3],[4,4],[3,5],[4,6],[3,7],[4,8]],
 			[[5,1],[6,2],[5,3],[6,4],[5,5],[6,6],[5,7],[6,8]]]) :-
  !.
 
-start_config(gliders, [[[2,1],[3,2],[3,3],[1,3],[2,3]], 
+start_config(gliders, [[[2,1],[3,2],[3,3],[1,3],[2,3]],
 		       [[6,6],[6,7],[6,8],[7,6],[8,7]]]) :-
  !.
 
@@ -175,8 +175,8 @@ pick_aux(N, Total, From, [E|Picked], Rest) :-
 % basc control for Conway next generation
 
 next_generation(Board, [NewAliveBlues, NewAliveReds]) :-
- findall([A,B,NewW], (cell(A,B), 
-                      what_in_cell(Board, A, B, W), 
+ findall([A,B,NewW], (cell(A,B),
+                      what_in_cell(Board, A, B, W),
                       change_cell(Board, A, B, W, NewW)),
          ABWs),
  findall([A,B], member([A,B,b], ABWs), NewAliveBlues),
@@ -191,7 +191,7 @@ what_in_cell([_, AliveReds], A, B, 'r') :-
  member([A,B], AliveReds).
 
 what_in_cell([AliveBlues, AliveReds], A, B, ' ') :-
- \+ member([A,B], AliveBlues), 
+ \+ member([A,B], AliveBlues),
  \+ member([A,B], AliveReds).
 
 %%%%% cchange_cell/5

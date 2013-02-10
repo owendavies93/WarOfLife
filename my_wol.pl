@@ -28,14 +28,18 @@ test_strategy(N, P1, P2) :-
     format('There were ~d blue wins.\n', [NumBlues]),
 
     get_second(ResultList, NumMoves),
-    delete(NumMoves, 250, NonExaustiveMoves).
+    delete(NumMoves, 250, NonExaustiveMoves),
 
-    %max_list(NonExaustiveMoves, LongestGame),
-    %format('The longest game was ~d moves', [LongestGame]),
+    max_member(LongestGame, NonExaustiveMoves),
+    format('The longest game was ~d moves.\n', [LongestGame]),
 
-    %min_list(NonExaustiveMoves, ShortestGame),
-    %format('The shortest game was ~d moves', [ShortestGame]).
+    min_member(ShortestGame, NonExaustiveMoves),
+    format('The shortest game was ~d moves.\n', [ShortestGame]),
 
+    sumlist(NumMoves, TotalMoves),
+    length(NumMoves, LengthNumMoves),
+    AverageLength is TotalMoves / LengthNumMoves,
+    format('The average game length was ~3f moves.\n', [AverageLength]).
 
 
 % Run N games and return the game results in a list

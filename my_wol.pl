@@ -94,11 +94,12 @@ simulate_move(r, Move, [Blues, Reds], [Blues, NewReds]) :-
 
 % Comparison redicate for comparing MoveOptions
 
-bloodlust_comparsion([NumOp1, _, _], [NumOp2, _, _]) :-
+comparsion([NumOp1, _, _], [NumOp2, _, _]) :-
     NumOp1 < NumOp2.
 
 
 % Make a move using the bloodlust strategy
+% Find all valid moves, put the results in MoveOptions, and pick the best
 
 bloodlust(Player, CurrentState, [Blue, Red], [OldX, OldY, BestX, BestY]) :-
     get_valid_moves(Player, CurrentState, PossMoves),
@@ -119,7 +120,30 @@ bloodlust(Player, CurrentState, [Blue, Red], [OldX, OldY, BestX, BestY]) :-
         MoveOptions
     ),
 
-    min_member(bloodlust_comparsion,
+    min_member(comparsion,
                [_, [OldX, OldY, BestX, BestY], [Blue, Red]],
                MoveOptions).
 
+
+% Make a move using the self preservation strategy, very similar to bloodlust
+
+self_preservation(Player, State, [Blue, Red], [OldX, OldY, BestX, BestY]) :-
+    get_valid_moves(Player, State, PossMoves),
+
+    findall(
+        [NumOurs, [OX, OY, NX, NY], [BlueState, RedState]],
+        (
+            member([OX, OY, NX, NY], PossMoves),
+            simulate_move(Player, [OX, OY, NX, NY], State, StateAfterMove),
+            next_generation(StateAfterMove, [BlueState, RedState]),
+            (
+                (Player == b) -> (Ours = BlueState) ; (Ours = RedState)
+            ),
+            length(Ours, NumOurs)
+        ),
+        MoveOptions
+    ),
+
+    max_member(comparsion,
+               [_, [OldX, OldY, BestX, BestY], [Blue, Red]],
+               MoveOptions).

@@ -70,6 +70,7 @@ get_valid_moves(Player, Board, PossMoves) :-
     findall(
         [OldX, OldY, NewX, NewY],
         (
+            cell(OldX, OldY),
             what_in_cell(Board, OldX, OldY, Player),
             neighbour_position(OldX, OldY, [NewX, NewY]),
             is_empty(NewX, NewY, Board)
@@ -80,3 +81,45 @@ get_valid_moves(Player, Board, PossMoves) :-
 is_empty(X, Y, [Blues, Reds]) :-
     \+ member([X, Y], Blues),
     \+ member([X, Y], Reds).
+
+
+% simulate a move on the given board
+
+simulate_move(b, Move, [Blues, Reds], [NewBlues, Reds]) :-
+    alter_board(Move, Blues, NewBlues).
+
+simulate_move(r, Move, [Blues, Reds], [Blues, NewReds]) :-
+    alter_board(Move, Reds, NewReds).
+
+
+% Comparison redicate for comparing MoveOptions
+
+bloodlust_comparsion([NumOp1, _, _], [NumOp2, _, _]) :-
+    NumOp1 < NumOp2.
+
+
+% Make a move using the bloodlust strategy
+
+bloodlust(Player, CurrentState, [Blue, Red], [OldX, OldY, BestX, BestY]) :-
+    get_valid_moves(Player, CurrentState, PossMoves),
+
+    findall(
+        [NumOpponent, [OX, OY, NX, NY], [BlueState, RedState]],
+        (
+            member([OX, OY, NX, NY], PossMoves),
+            simulate_move(Player, [OX, OY, NX, NY], CurrentState,
+                          StateAfterMove),
+
+            next_generation(StateAfterMove, [BlueState, RedState]),
+            (
+                (Player == b) -> (Op = RedState) ; (Op = BlueState)
+            ),
+            length(Op, NumOpponent)
+        ),
+        MoveOptions
+    ),
+
+    min_member(bloodlust_comparsion,
+               [_, [OldX, OldY, BestX, BestY], [Blue, Red]],
+               MoveOptions).
+

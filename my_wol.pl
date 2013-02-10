@@ -151,3 +151,35 @@ self_preservation(Player, State, [Blue, Red], [OldX, OldY, BestX, BestY]) :-
                [_, [OldX, OldY, BestX, BestY], [Blue, Red]],
                MoveOptions).
 
+
+% Make a move using the land grab strategy. Slightly more complex heuristic,
+% wins well against the two strategies above.
+
+land_grab(Player, State, [Blue, Red], [OldX, OldY, BestX, BestY]) :-
+    get_valid_moves(Player, State, PossMoves),
+
+    findall(
+        [Diff, Move, [BlueState, RedState]],
+        (
+            simulate_move_and_crank(Player, PossMoves, Move, State,
+                                    [BlueState, RedState]),
+            (
+                (Player = b) -> (Ours = BlueState, Ops = RedState) ;
+                                (Ours = RedState, Ops = BlueState)
+            ),
+            land_grab_heuristic([Ours, Ops], Diff)
+        ),
+        MoveOptions
+    ),
+
+    max_member(comparsion,
+               [_, [OldX, OldY, BestX, BestY], [Blue, Red]],
+               MoveOptions).
+
+
+% Factored this out from above for use in minimax
+
+land_grab_heuristic([Ours, Ops], Diff) :-
+    length(Ours, NumOurs),
+    length(Ops, NumOps),
+    Diff is NumOurs - NumOps.

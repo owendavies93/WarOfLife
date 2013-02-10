@@ -92,6 +92,13 @@ simulate_move(r, Move, [Blues, Reds], [Blues, NewReds]) :-
     alter_board(Move, Reds, NewReds).
 
 
+% Factored out the middle of multiple strategies, as they're all the same
+
+simulate_move_and_crank(Player, PossMoves, Move, Orig, Result) :-
+    member(Move, PossMoves),
+    simulate_move(Player, Move, Orig, StateAfterMove),
+    next_generation(StateAfterMove, Result).
+
 % Comparison redicate for comparing MoveOptions
 
 comparsion([NumOp1, _, _], [NumOp2, _, _]) :-
@@ -105,13 +112,10 @@ bloodlust(Player, CurrentState, [Blue, Red], [OldX, OldY, BestX, BestY]) :-
     get_valid_moves(Player, CurrentState, PossMoves),
 
     findall(
-        [NumOpponent, [OX, OY, NX, NY], [BlueState, RedState]],
+        [NumOpponent, Move, [BlueState, RedState]],
         (
-            member([OX, OY, NX, NY], PossMoves),
-            simulate_move(Player, [OX, OY, NX, NY], CurrentState,
-                          StateAfterMove),
-
-            next_generation(StateAfterMove, [BlueState, RedState]),
+            simulate_move_and_crank(Player, PossMoves, Move, CurrentState,
+                                    [BlueState, RedState]),
             (
                 (Player == b) -> (Op = RedState) ; (Op = BlueState)
             ),
@@ -131,11 +135,10 @@ self_preservation(Player, State, [Blue, Red], [OldX, OldY, BestX, BestY]) :-
     get_valid_moves(Player, State, PossMoves),
 
     findall(
-        [NumOurs, [OX, OY, NX, NY], [BlueState, RedState]],
+        [NumOurs, Move, [BlueState, RedState]],
         (
-            member([OX, OY, NX, NY], PossMoves),
-            simulate_move(Player, [OX, OY, NX, NY], State, StateAfterMove),
-            next_generation(StateAfterMove, [BlueState, RedState]),
+            simulate_move_and_crank(Player, PossMoves, Move, State,
+                                    [BlueState, RedState]),
             (
                 (Player == b) -> (Ours = BlueState) ; (Ours = RedState)
             ),
@@ -147,3 +150,4 @@ self_preservation(Player, State, [Blue, Red], [OldX, OldY, BestX, BestY]) :-
     max_member(comparsion,
                [_, [OldX, OldY, BestX, BestY], [Blue, Red]],
                MoveOptions).
+

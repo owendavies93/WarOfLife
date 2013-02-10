@@ -1,5 +1,6 @@
 :- ensure_loaded('war_of_life.pl').
 
+% PART 1
 
 % Run N tests with the given strategies, and collate and print the results.
 
@@ -57,3 +58,25 @@ run_tests(N, P1, P2, ResultList) :-
 get_second([], []).
 get_second([[_, S] | Rest], [S | ResRest]) :-
     get_second(Rest, ResRest).
+
+
+
+% PART 2
+
+% Return a list of valid moves for player Player in state Board. The list is
+% given in the form [[OldX, OldY, NewX, NewY],...]
+
+get_valid_moves(Player, Board, PossMoves) :-
+    findall(
+        [OldX, OldY, NewX, NewY],
+        (
+            what_in_cell(Board, OldX, OldY, Player),
+            neighbour_position(OldX, OldY, [NewX, NewY]),
+            is_empty(NewX, NewY, Board)
+        ),
+        PossMoves
+    ).
+
+is_empty(X, Y, [Blues, Reds]) :-
+    \+ member([X, Y], Blues),
+    \+ member([X, Y], Reds).

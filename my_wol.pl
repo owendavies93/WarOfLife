@@ -20,13 +20,13 @@ test_strategy(N, P1, P2) :-
     length(Draws, NumDraws),
     format('There were ~d draws.\n', [NumDraws]),
 
-    findall(Elem, nth1(Index, ResultList, [r, _]), Reds),
-    length(Reds, NumReds),
-    format('There were ~d red wins.\n', [NumReds]),
-
     findall(Elem, nth1(Index, ResultList, [b, _]), Blues),
     length(Blues, NumBlues),
     format('There were ~d blue wins.\n', [NumBlues]),
+
+    findall(Elem, nth1(Index, ResultList, [r, _]), Reds),
+    length(Reds, NumReds),
+    format('There were ~d red wins.\n', [NumReds]),
 
     get_second(ResultList, NumMoves),
     delete(NumMoves, 250, NonExaustiveMoves),
@@ -152,11 +152,10 @@ self_preservation(Player, State, New, NewMove) :-
 % Make a move using the land grab strategy. Slightly more complex heuristic,
 % wins well against the two strategies above.
 
-land_grab(Player, State, New, NewMove) :-
-    land_grab(Player, State, New, NewMove, _).
+% Make a move using the land grab strategy. Slightly more complex heuristic,
+% wins well against the two strategies above.
 
-
-land_grab(Player, State, New, NewMove, BestDiff) :-
+land_grab(Player, State, [Blue, Red], [OldX, OldY, BestX, BestY]) :-
     get_valid_moves(Player, State, PossMoves),
 
     findall(
@@ -173,7 +172,10 @@ land_grab(Player, State, New, NewMove, BestDiff) :-
         MoveOptions
     ),
 
-    min_member(comparsion, [BestDiff, NewMove, New], MoveOptions).
+    max_member(comparsion,
+               [_, [OldX, OldY, BestX, BestY], [Blue, Red]],
+               MoveOptions).
+
 
 % Factored this out from above for use in minimax
 

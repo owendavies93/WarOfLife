@@ -184,3 +184,59 @@ land_grab_heuristic([Ours, Ops], Diff) :-
     length(Ops, NumOps),
     Diff is NumOurs - NumOps.
 
+op(b, r).
+op(r, b).
+
+
+% Play a move using the minimax strategy. The minimax function gets all the
+% possible moves for Player, then the minimize function checks all those moves
+% from the perpective of Op and returns a list with the differences.
+
+minimax(Player, State, FinalState, FinalMove) :-
+    get_valid_moves(Player, State, PossMoves),
+
+    findall(
+        [Diff, Move, AfterMove],
+        (
+            simulate_move_and_crank(Player, PossMoves, Move, State, AfterMove,
+                                    [BlueState, RedState]),
+            (
+                (Player = b) -> (Ours = BlueState, Ops = RedState) ;
+                                (Ours = RedState, Ops = BlueState)
+            ),
+            land_grab_heuristic([Ours, Ops], Diff)
+        ),
+        MoveOptions
+    ),
+
+    op(Player, Op),
+
+    minimize(Op, MoveOptions, Result),
+
+    max_member(comparsion, [_, FinalMove, FinalState], Result).
+
+
+minimize(_, [], []).
+minimize(Player, [[OldDiff, Move, AfterMove] | Rest], [Res | Results]) :-
+    get_valid_moves(Player, AfterMove, PossMoves),
+
+    findall(
+        [Diff, Mv, St],
+        (
+            simulate_move_and_crank(Player, PossMoves, Mv, AfterMove, St,
+                                    [BlueState, RedState]),
+            (
+                (Player = b) -> (Ours = BlueState, Ops = RedState) ;
+                                (Ours = RedState, Ops = BlueState)
+            ),
+            land_grab_heuristic([Ours, Ops], Diff)
+        ),
+        MoveOptions
+    ),
+
+    max_member(comparsion, [WorstDiff, _, _], MoveOptions),
+
+    NewDiff is OldDiff - WorstDiff,
+
+    Res = [NewDiff, Move, AfterMove],
+    minimize(Player, Rest, Results).

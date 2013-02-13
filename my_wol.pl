@@ -99,7 +99,8 @@ simulate_move_and_crank(Player, PossMoves, Move, Orig, Result) :-
     simulate_move(Player, Move, Orig, StateAfterMove),
     next_generation(StateAfterMove, Result).
 
-% Comparison redicate for comparing MoveOptions
+
+% Comparison predicate for comparing MoveOptions and DiffOptions
 
 comparsion([NumOp1, _, _], [NumOp2, _, _]) :-
     NumOp1 < NumOp2.
@@ -108,7 +109,7 @@ comparsion([NumOp1, _, _], [NumOp2, _, _]) :-
 % Make a move using the bloodlust strategy
 % Find all valid moves, put the results in MoveOptions, and pick the best
 
-bloodlust(Player, CurrentState, [Blue, Red], [OldX, OldY, BestX, BestY]) :-
+bloodlust(Player, CurrentState, New, NewMove) :-
     get_valid_moves(Player, CurrentState, PossMoves),
 
     findall(
@@ -124,14 +125,12 @@ bloodlust(Player, CurrentState, [Blue, Red], [OldX, OldY, BestX, BestY]) :-
         MoveOptions
     ),
 
-    min_member(comparsion,
-               [_, [OldX, OldY, BestX, BestY], [Blue, Red]],
-               MoveOptions).
+    min_member(comparsion, [_, NewMove, New], MoveOptions).
 
 
 % Make a move using the self preservation strategy, very similar to bloodlust
 
-self_preservation(Player, State, [Blue, Red], [OldX, OldY, BestX, BestY]) :-
+self_preservation(Player, State, New, NewMove) :-
     get_valid_moves(Player, State, PossMoves),
 
     findall(
@@ -147,15 +146,17 @@ self_preservation(Player, State, [Blue, Red], [OldX, OldY, BestX, BestY]) :-
         MoveOptions
     ),
 
-    max_member(comparsion,
-               [_, [OldX, OldY, BestX, BestY], [Blue, Red]],
-               MoveOptions).
+    min_member(comparsion, [_, NewMove, New], MoveOptions).
 
 
 % Make a move using the land grab strategy. Slightly more complex heuristic,
 % wins well against the two strategies above.
 
-land_grab(Player, State, [Blue, Red], [OldX, OldY, BestX, BestY]) :-
+land_grab(Player, State, New, NewMove) :-
+    land_grab(Player, State, New, NewMove, _).
+
+
+land_grab(Player, State, New, NewMove, BestDiff) :-
     get_valid_moves(Player, State, PossMoves),
 
     findall(
@@ -172,10 +173,7 @@ land_grab(Player, State, [Blue, Red], [OldX, OldY, BestX, BestY]) :-
         MoveOptions
     ),
 
-    max_member(comparsion,
-               [_, [OldX, OldY, BestX, BestY], [Blue, Red]],
-               MoveOptions).
-
+    min_member(comparsion, [BestDiff, NewMove, New], MoveOptions).
 
 % Factored this out from above for use in minimax
 
@@ -183,3 +181,37 @@ land_grab_heuristic([Ours, Ops], Diff) :-
     length(Ours, NumOurs),
     length(Ops, NumOps),
     Diff is NumOurs - NumOps.
+
+op(b, r).
+op(r, b).
+
+minimax(Player, State, NewState, NewMove) :-
+    get_valid_moves(Player, State, PossMoves),
+
+    findall(
+        [Diff, Move, [BlueState, RedState]],
+        (
+            simulate_move_and_crank(Player, PossMoves, Move, State,
+                                    [BlueState, RedState]),
+            (
+                (Player = b) -> (Ours = BlueState, Ops = RedState) ;
+                                (Ours = RedState, Ops = BlueState)
+            ),
+            land_grab_heuristic([Ours, Ops], Diff)
+        ),
+        MoveOptions
+    ),
+
+    op(Player, Op),
+
+    findall(
+        [NextDiff, Move, OldState],
+        (
+            member([OldDiff, Move, OldState], MoveOptions),
+            land_grab(Op, OldState, _, _, Diff),
+            NextDiff is OldDiff - Diff
+        ),
+        DiffOptions
+    ),
+
+    max_member(comparsion, [_, NewMove, NewState], DiffOptions).

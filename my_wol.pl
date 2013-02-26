@@ -60,6 +60,24 @@ get_second([[_, S] | Rest], [S | ResRest]) :-
     get_second(Rest, ResRest).
 
 
+run(N) :-
+    test_strategy(N, random, minimax),
+    write('\n'),
+    test_strategy(N, bloodlust, minimax),
+    write('\n'),
+    test_strategy(N, self_preservation, minimax),
+    write('\n'),
+    test_strategy(N, land_grab, minimax),
+    write('\n'),
+    test_strategy(N, minimax, random),
+    write('\n'),
+    test_strategy(N, minimax, bloodlust),
+    write('\n'),
+    test_strategy(N, minimax, self_preservation),
+    write('\n'),
+    test_strategy(N, minimax, land_grab),
+    write('\n'),
+    test_strategy(N, minimax, minimax).
 
 % PART 2
 
@@ -106,83 +124,71 @@ comparsion([NumOp1, _, _], [NumOp2, _, _]) :-
     NumOp1 < NumOp2.
 
 
+% Get the cells we are interested in depending on the strategy
+
+get_interesting(Player, bloodlust, [BlueState, RedState], Op) :-
+    (Player == b) -> (Op = RedState) ; (Op = BlueState).
+
+get_interesting(Player, self_preservation, [BlueState, RedState], Ours) :-
+    (Player == b) -> (Ours = BlueState) ; (Ours = RedState).
+
+get_interesting(Player, land_grab, [BlueState, RedState], [Ours, Ops]) :-
+    (Player = b) -> (Ours = BlueState, Ops = RedState) ;
+                    (Ours = RedState, Ops = BlueState).
+
+
+% evaluate the heuristic depending on the strategy
+
+evaluate_heuristic(bloodlust, Op, Num) :- length(Op, Num).
+evaluate_heuristic(self_preservation, Ours, Num) :- length(Ours, Num).
+evaluate_heuristic(land_grab, Both, Diff) :- land_grab_heuristic(Both, Diff).
+
+land_grab_heuristic([Ours, Ops], Diff) :-
+    length(Ours, NumOurs),
+    length(Ops, NumOps),
+    Diff is NumOurs - NumOps.
+
+% Cut out the code duplication
+
+get_move_options(Player, State, Strategy, MoveOptions) :-
+    get_valid_moves(Player, State, PossMoves),
+
+    findall(
+        [Num, Move, AfterMove],
+        (
+            simulate_move_and_crank(Player, PossMoves, Move, State, AfterMove,
+                                    NewState),
+            (
+                get_interesting(Player, Strategy, NewState, Op)
+            ),
+            evaluate_heuristic(Strategy, Op, Num)
+        ),
+        MoveOptions
+    ).
+
+
 % Make a move using the bloodlust strategy
 % Find all valid moves, put the results in MoveOptions, and pick the best
 
 bloodlust(Player, State, New, NewMove) :-
-    get_valid_moves(Player, State, PossMoves),
-
-    findall(
-        [NumOpponent, Move, AfterMove],
-        (
-            simulate_move_and_crank(Player, PossMoves, Move, State, AfterMove,
-                                    [BlueState, RedState]),
-            (
-                (Player == b) -> (Op = RedState) ; (Op = BlueState)
-            ),
-            length(Op, NumOpponent)
-        ),
-        MoveOptions
-    ),
-
+    get_move_options(Player, State, bloodlust, MoveOptions),
     min_member(comparsion, [_, NewMove, New], MoveOptions).
 
 
 % Make a move using the self preservation strategy, very similar to bloodlust
 
 self_preservation(Player, State, New, NewMove) :-
-    get_valid_moves(Player, State, PossMoves),
-
-    findall(
-        [NumOurs, Move, AfterMove],
-        (
-            simulate_move_and_crank(Player, PossMoves, Move, State, AfterMove,
-                                    [BlueState, RedState]),
-            (
-                (Player == b) -> (Ours = BlueState) ; (Ours = RedState)
-            ),
-            length(Ours, NumOurs)
-        ),
-        MoveOptions
-    ),
-
+    get_move_options(Player, State, self_preservation, MoveOptions),
     max_member(comparsion, [_, NewMove, New], MoveOptions).
 
 
 % Make a move using the land grab strategy. Slightly more complex heuristic,
 % wins well against the two strategies above.
 
-% Make a move using the land grab strategy. Slightly more complex heuristic,
-% wins well against the two strategies above.
-
 land_grab(Player, State, FinalState, FinalMove) :-
-    get_valid_moves(Player, State, PossMoves),
+    get_move_options(Player, State, land_grab, MoveOptions),
+    max_member(comparsion, [_, FinalMove, FinalState], MoveOptions).
 
-    findall(
-        [Diff, Move, AfterMove],
-        (
-            simulate_move_and_crank(Player, PossMoves, Move, State, AfterMove,
-                                    [BlueState, RedState]),
-            (
-                (Player = b) -> (Ours = BlueState, Ops = RedState) ;
-                                (Ours = RedState, Ops = BlueState)
-            ),
-            land_grab_heuristic([Ours, Ops], Diff)
-        ),
-        MoveOptions
-    ),
-
-    max_member(comparsion,
-               [_, FinalMove, FinalState],
-               MoveOptions).
-
-
-% Factored this out from above for use in minimax
-
-land_grab_heuristic([Ours, Ops], Diff) :-
-    length(Ours, NumOurs),
-    length(Ops, NumOps),
-    Diff is NumOurs - NumOps.
 
 op(b, r).
 op(r, b).
@@ -193,50 +199,17 @@ op(r, b).
 % from the perpective of Op and returns a list with the differences.
 
 minimax(Player, State, FinalState, FinalMove) :-
-    get_valid_moves(Player, State, PossMoves),
-
-    findall(
-        [Diff, Move, AfterMove],
-        (
-            simulate_move_and_crank(Player, PossMoves, Move, State, AfterMove,
-                                    [BlueState, RedState]),
-            (
-                (Player = b) -> (Ours = BlueState, Ops = RedState) ;
-                                (Ours = RedState, Ops = BlueState)
-            ),
-            land_grab_heuristic([Ours, Ops], Diff)
-        ),
-        MoveOptions
-    ),
-
+    get_move_options(Player, State, land_grab, MoveOptions),
     op(Player, Op),
-
     minimize(Op, MoveOptions, Result),
-
     max_member(comparsion, [_, FinalMove, FinalState], Result).
 
 
 minimize(_, [], []).
 minimize(Player, [[OldDiff, Move, AfterMove] | Rest], [Res | Results]) :-
-    get_valid_moves(Player, AfterMove, PossMoves),
-
-    findall(
-        [Diff, Mv, St],
-        (
-            simulate_move_and_crank(Player, PossMoves, Mv, AfterMove, St,
-                                    [BlueState, RedState]),
-            (
-                (Player = b) -> (Ours = BlueState, Ops = RedState) ;
-                                (Ours = RedState, Ops = BlueState)
-            ),
-            land_grab_heuristic([Ours, Ops], Diff)
-        ),
-        MoveOptions
-    ),
-
+    get_move_options(Player, AfterMove, land_grab, MoveOptions),
     max_member(comparsion, [WorstDiff, _, _], MoveOptions),
 
     NewDiff is OldDiff - WorstDiff,
-
     Res = [NewDiff, Move, AfterMove],
     minimize(Player, Rest, Results).
